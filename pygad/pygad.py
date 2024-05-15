@@ -5,10 +5,20 @@ import time
 import warnings
 import concurrent.futures
 import inspect
+from typing import Literal, Callable
 import logging
 from pygad import utils
 from pygad import helper
 from pygad import visualize
+
+def timing_decorator(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Time taken by {func.__name__} function: {end_time - start_time:.3f} seconds")
+        return result
+    return wrapper
 
 # Extend all the classes so that they can be referenced by just the `self` object of the `pygad.GA` class.
 class GA(utils.parent_selection.ParentSelection,
@@ -26,46 +36,47 @@ class GA(utils.parent_selection.ParentSelection,
     supported_int_float_types = supported_int_types + supported_float_types
 
     def __init__(self,
-                 num_generations,
-                 num_parents_mating,
-                 fitness_func,
-                 fitness_batch_size=None,
+                 num_generations: int,
+                 num_parents_mating: int,
+                 fitness_func: Callable,
+                 fitness_batch_size: int = None,
                  initial_population=None,
-                 sol_per_pop=None,
-                 num_genes=None,
-                 init_range_low=-4,
-                 init_range_high=4,
+                 sol_per_pop: int = None,
+                 num_genes: int = None,
+                 init_range_low: float = -4,
+                 init_range_high: float = 4,
                  gene_type=float,
-                 parent_selection_type="sss",
-                 keep_parents=-1,
-                 keep_elitism=1,
-                 K_tournament=3,
-                 crossover_type="single_point",
-                 crossover_probability=None,
-                 mutation_type="random",
+                 parent_selection_type: Literal["sss", "rws", "sus", "rank", "random", "tournament"] = "sss",
+                 keep_parents: int = -1,
+                 keep_elitism: int = 1,
+                 K_tournament: int = 3,
+                 crossover_type: Literal["single_point", "two_points", "uniform", "scattered", None] = "single_point",
+                 crossover_probability: float = None,
+                 mutation_type: Literal["random", "swap", "inversion", "scramble", "adaptive"] = "random",
                  mutation_probability=None,
-                 mutation_by_replacement=False,
-                 mutation_percent_genes='default',
+                 mutation_by_replacement: bool = False,
+                 mutation_percent_genes='default', # Why not set the numeric value directly?
                  mutation_num_genes=None,
-                 random_mutation_min_val=-1.0,
-                 random_mutation_max_val=1.0,
-                 gene_space=None,
-                 allow_duplicate_genes=True,
-                 on_start=None,
-                 on_fitness=None,
-                 on_parents=None,
-                 on_crossover=None,
-                 on_mutation=None,
-                 on_generation=None,
-                 on_stop=None,
-                 delay_after_gen=0.0,
-                 save_best_solutions=False,
-                 save_solutions=False,
-                 suppress_warnings=False,
-                 stop_criteria=None,
-                 parallel_processing=None,
-                 random_seed=None,
-                 logger=None):
+                 random_mutation_min_val: float = -1.0,
+                 random_mutation_max_val: float = 1.0,
+                 gene_space: list | range | numpy.ndarray | list[list] | list[range] | list[numpy.ndarray] = None,
+                 allow_duplicate_genes: bool = True,
+                 on_start: Callable = None,
+                 on_fitness: Callable = None,
+                 on_parents: Callable = None,
+                 on_crossover: Callable = None,
+                 on_mutation: Callable = None,
+                 on_generation: Callable = None,
+                 on_stop: Callable = None,
+                 delay_after_gen: float = 0.0,
+                 save_best_solutions: bool = False,
+                 save_solutions: bool = False,
+                 suppress_warnings: bool = False,
+                 stop_criteria: str = None,
+                 parallel_processing: int | list[str, int] | tuple[str, int] = None,
+                 random_seed: int = None,
+                 logger=None,
+                 gene_names:list['str'] = None,):
         """
         The constructor of the GA class accepts all parameters required to create an instance of the GA class. It validates such parameters.
 
@@ -401,6 +412,12 @@ class GA(utils.parent_selection.ParentSelection,
             else:
                 self.valid_parameters = False
                 raise ValueError(f"The value passed to the 'gene_type' parameter must be either a single integer, floating-point, list, tuple, or numpy.ndarray but ({gene_type}) of type {type(gene_type)} found.")
+
+            # Validate gene_names
+            if gene_names is not None:
+                if len(gene_names) != num_genes:
+                    raise ValueError(f"The length of the 'gene_names' parameter ({len(gene_names)}) must be equal to the number of genes ({num_genes}).")
+            self.gene_names = gene_names
 
             # Call the unpack_gene_space() method in the pygad.helper.unique.Unique class.
             self.gene_space_unpacked = self.unpack_gene_space(range_min=self.init_range_low,
@@ -1872,6 +1889,7 @@ class GA(utils.parent_selection.ParentSelection,
             raise ex
         return pop_fitness
 
+    @timing_decorator
     def run(self):
         """
         Runs the genetic algorithm. This is the main method in which the genetic algorithm is evolved through a number of generations.
