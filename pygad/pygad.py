@@ -73,7 +73,7 @@ class GA(utils.parent_selection.ParentSelection,
                  save_solutions: bool = False,
                  suppress_warnings: bool = False,
                  stop_criteria: str = None,
-                 parallel_processing: int | list[str, int] | tuple[str, int] = None,
+                 parallel_processing: int | list[Literal["process", "thread"]|int] | tuple[Literal["process", "thread"], int] = None,
                  random_seed: int = None,
                  logger=None,
                  gene_names:list['str'] = None,):
